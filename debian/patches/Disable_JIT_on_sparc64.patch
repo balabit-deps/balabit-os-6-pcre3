@@ -1,0 +1,23 @@
+Description: Disable JIT on sparc64 as it needs explicit porting
+ The test suite currently fails on sparc64 when the JIT is enabled
+ as the JIT has not been ported to sparc64 yet. Thus, disable JIT
+ until it has been explicitly ported to sparc64.
+ .
+
+Index: pcre3/sljit/sljitConfigInternal.h
+===================================================================
+--- pcre3.orig/sljit/sljitConfigInternal.h	2015-12-22 13:30:50.000000000 +0000
++++ pcre3/sljit/sljitConfigInternal.h	2015-12-22 13:33:30.000000000 +0000
+@@ -145,7 +145,11 @@
+ #elif defined(__mips64)
+ #define SLJIT_CONFIG_MIPS_64 1
+ #elif defined(__sparc__) || defined(__sparc)
+-#define SLJIT_CONFIG_SPARC_32 1
++# if defined(__arch64__)
++#  define SLJIT_CONFIG_UNSUPPORTED 1
++# else
++#  define SLJIT_CONFIG_SPARC_32 1
++# endif
+ #elif defined(__tilegx__)
+ #define SLJIT_CONFIG_TILEGX 1
+ #else

@@ -1,0 +1,21 @@
+From: Mark Baker <mark@mnb.org.uk>
+Description: Change soname to what debian use
+Index: pcre3/configure.ac
+===================================================================
+--- pcre3.orig/configure.ac	2015-12-22 13:27:15.000000000 +0000
++++ pcre3/configure.ac	2015-12-22 13:28:37.000000000 +0000
+@@ -17,10 +17,10 @@
+ # 50 lines of this file. Please update that if the variables above are moved.
+ 
+ # Libtool shared library interface versions (current:revision:age)
+-m4_define(libpcre_version, [3:6:2])
+-m4_define(libpcre16_version, [2:6:2])
+-m4_define(libpcre32_version, [0:6:0])
+-m4_define(libpcreposix_version, [0:3:0])
++m4_define(libpcre_version, [16:2:13])
++m4_define(libpcre16_version, [16:2:13])
++m4_define(libpcre32_version, [16:2:13])
++m4_define(libpcreposix_version, [16:2:13])
+ m4_define(libpcrecpp_version, [0:1:0])
+ 
+ AC_PREREQ(2.57)

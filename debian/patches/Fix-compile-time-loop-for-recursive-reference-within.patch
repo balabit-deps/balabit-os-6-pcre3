@@ -1,0 +1,86 @@
+Description: PCRE Call Stack Overflow Vulnerability
+ Fix compile-time loop for recursive reference within a group
+ with an indefinite repeat.
+Origin: backport, http://vcs.pcre.org/pcre?view=revision&revision=1498
+Bug: https://bugs.exim.org/show_bug.cgi?id=1515
+Forwarded: not-needed
+Last-Update: 2015-09-10
+Applied-Upstream: 8.36
+
+--- a/pcre_compile.c
++++ b/pcre_compile.c
+@@ -2367,6 +2367,7 @@ for (code = first_significant_code(code
+   if (c == OP_RECURSE)
+     {
+     const pcre_uchar *scode = cd->start_code + GET(code, 1);
++    const pcre_uchar *endgroup = scode;
+     BOOL empty_branch;
+ 
+     /* Test for forward reference or uncompleted reference. This is disabled
+@@ -2381,24 +2382,20 @@ for (code = first_significant_code(code
+       if (GET(scode, 1) == 0) return TRUE;    /* Unclosed */
+       }
+ 
+-    /* If we are scanning a completed pattern, there are no forward references
+-    and all groups are complete. We need to detect whether this is a recursive
+-    call, as otherwise there will be an infinite loop. If it is a recursion,
+-    just skip over it. Simple recursions are easily detected. For mutual
+-    recursions we keep a chain on the stack. */
++    /* If the reference is to a completed group, we need to detect whether this
++    is a recursive call, as otherwise there will be an infinite loop. If it is
++    a recursion, just skip over it. Simple recursions are easily detected. For
++    mutual recursions we keep a chain on the stack. */
+ 
++    do endgroup += GET(endgroup, 1); while (*endgroup == OP_ALT);
++    if (code >= scode && code <= endgroup) continue;  /* Simple recursion */
+     else
+-      {
++      {  
+       recurse_check *r = recurses;
+-      const pcre_uchar *endgroup = scode;
+-
+-      do endgroup += GET(endgroup, 1); while (*endgroup == OP_ALT);
+-      if (code >= scode && code <= endgroup) continue;  /* Simple recursion */
+-
+       for (r = recurses; r != NULL; r = r->prev)
+         if (r->group == scode) break;
+       if (r != NULL) continue;   /* Mutual recursion */
+-      }
++      } 
+ 
+     /* Completed reference; scan the referenced group, remembering it on the
+     stack chain to detect mutual recursions. */
+--- a/testdata/testinput1
++++ b/testdata/testinput1
+@@ -4937,6 +4937,12 @@ however, we need the complication for Pe
+ 
+ /((?(R1)a+|(?1)b))/
+     aaaabcde
++    
++/((?(R)a|(?1)))*/
++    aaa
++
++/((?(R)a|(?1)))+/
++    aaa
+ 
+ /a(*:any 
+ name)/K
+--- a/testdata/testoutput1
++++ b/testdata/testoutput1
+@@ -8234,6 +8234,16 @@ MK: M
+     aaaabcde
+  0: aaaab
+  1: aaaab
++    
++/((?(R)a|(?1)))*/
++    aaa
++ 0: aaa
++ 1: a
++
++/((?(R)a|(?1)))+/
++    aaa
++ 0: aaa
++ 1: a
+ 
+ /a(*:any 
+ name)/K

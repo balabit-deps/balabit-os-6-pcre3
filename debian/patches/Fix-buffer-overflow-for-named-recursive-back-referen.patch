@@ -1,0 +1,59 @@
+Description: CVE-2015-3210: heap buffer overflow in pcre_compile2() / compile_regex()
+ Fix buffer overflow for named recursive back reference when
+ the name is duplicated.
+Origin: upstream, http://vcs.pcre.org/pcre?view=revision&revision=1558
+Bug: https://bugs.exim.org/show_bug.cgi?id=1636
+Bug-Debian: https://bugs.debian.org/787433
+Forwarded: not-needed
+Last-Update: 2015-09-10
+Applied-Upstream: not-yet (8.38)
+
+--- a/pcre_compile.c
++++ b/pcre_compile.c
+@@ -7082,14 +7082,26 @@ for (;; ptr++)
+           number. If the name is not found, set the value to 0 for a forward
+           reference. */
+ 
++          recno = 0;
+           ng = cd->named_groups;
+           for (i = 0; i < cd->names_found; i++, ng++)
+             {
+             if (namelen == ng->length &&
+                 STRNCMP_UC_UC(name, ng->name, namelen) == 0)
+-              break;
++              {
++              open_capitem *oc;
++              recno = ng->number;
++              if (is_recurse) break;
++              for (oc = cd->open_caps; oc != NULL; oc = oc->next)         
++                {          
++                if (oc->number == recno)                                     
++                  {               
++                  oc->flag = TRUE;                                      
++                  break;
++                  }                                                         
++                }                          
++              }    
+             }
+-          recno = (i < cd->names_found)? ng->number : 0;
+ 
+           /* Count named back references. */
+ 
+--- a/testdata/testinput2
++++ b/testdata/testinput2
+@@ -4068,4 +4068,6 @@ backtracking verbs. --/
+ 
+ /((?+1)(\1))/BZ
+ 
++"(?J)(?'d'(?'d'\g{d}))"
++
+ /-- End of testinput2 --/
+--- a/testdata/testoutput2
++++ b/testdata/testoutput2
+@@ -14190,4 +14190,6 @@ Failed: parentheses are too deeply neste
+         End
+ ------------------------------------------------------------------
+ 
++"(?J)(?'d'(?'d'\g{d}))"
++
+ /-- End of testinput2 --/
